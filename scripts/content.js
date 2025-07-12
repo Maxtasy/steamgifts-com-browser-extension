@@ -41,11 +41,15 @@ function handleJoined(element) {
 
     const ratingElement = document.createElement('span');
 
+    ratingElement.style.marginLeft = '4px';
+
+    ratingElement.innerHTML = `<div style="width: 80px; height: 14px; background-color: #636363; border-radius: 2px;"></div>`;
+
+    element.appendChild(ratingElement);
+
     const appUrl = element.querySelector('[href^="https://store.steampowered.com"]').href;
 
     const { rating } = await chrome.runtime.sendMessage({ event: 'steam:rating', appUrl });
-
-    ratingElement.style.marginLeft = '4px';
 
     ratingElement.innerHTML = `(${rating})`;
 
@@ -56,8 +60,6 @@ function handleJoined(element) {
     } else {
       ratingElement.style.color = '#d70000';
     }
-
-    element.appendChild(ratingElement);
   });
 
   // Giveaway Page
