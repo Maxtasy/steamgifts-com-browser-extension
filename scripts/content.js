@@ -18,7 +18,7 @@ function handleJoined(element) {
   // Main Page
   const giveawayHeadingElements = document.querySelectorAll('.giveaway__heading');
 
-  giveawayHeadingElements.forEach((element) => {
+  giveawayHeadingElements.forEach(async (element) => {
     const { href } = element.querySelector('.giveaway__heading__name');
 
     const url = `${href}?autojoin=true`;
@@ -38,6 +38,26 @@ function handleJoined(element) {
     `;
 
     element.appendChild(joinButtonElement);
+
+    const ratingElement = document.createElement('span');
+
+    const appUrl = element.querySelector('[href^="https://store.steampowered.com"]').href;
+
+    const { rating } = await chrome.runtime.sendMessage({ event: 'steam:rating', appUrl });
+
+    ratingElement.style.marginLeft = '4px';
+
+    ratingElement.innerHTML = `(${rating})`;
+
+    if (
+      ['Overwhelmingly Positive', 'Very Positive', 'Positive', 'Mostly Positive'].includes(rating)
+    ) {
+      ratingElement.style.color = '#00d700';
+    } else {
+      ratingElement.style.color = '#d70000';
+    }
+
+    element.appendChild(ratingElement);
   });
 
   // Giveaway Page
