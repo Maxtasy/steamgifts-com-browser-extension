@@ -1,3 +1,5 @@
+/* Page modifications */
+
 header {
   position: sticky;
   top: 0;
@@ -5,4 +7,21 @@ header {
 
 .giveaway__row-outer-wrap:has(.giveaway__row-inner-wrap.is-faded) {
   display: none;
+}
+
+/* Injected Elements */
+
+.AdditionalInfoElement {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 120px;
+  height: 14px;
+  background-color: #636363;
+  border-radius: 2px;
+}
+
+.AdditionalInfoElement--Loaded {
+  width: auto;
+  background-color: transparent;
 }

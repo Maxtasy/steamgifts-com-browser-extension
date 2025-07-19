@@ -9,15 +9,18 @@ async function ensureOffscreen() {
   }
 }
 
-async function getSteamRating(appUrl) {
+async function getSteamGameInfo(appUrl) {
   const response = await fetch(appUrl);
   const html = await response.text();
   await ensureOffscreen();
 
   return new Promise((resolve) => {
-    chrome.runtime.sendMessage({ type: 'PARSE_HTML', html }, (res) => {
-      resolve(res.rating || 'No rating found');
-    });
+    chrome.runtime.sendMessage(
+      { type: 'PARSE_HTML', html },
+      ({ ageRestricted, rating, achievements }) => {
+        resolve({ ageRestricted, rating, achievements });
+      }
+    );
   });
 }
 
@@ -32,9 +35,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     chrome.tabs.remove(sender.tab.id);
   }
 
-  if (event === 'steam:rating') {
-    getSteamRating(appUrl).then((rating) => {
-      sendResponse({ rating });
+  if (event === 'steam:game-info') {
+    getSteamGameInfo(appUrl).then(({ ageRestricted, rating, achievements }) => {
+      sendResponse({ ageRestricted, rating, achievements });
     });
     return true; // ✅ allow async response
   }

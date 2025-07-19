@@ -18,8 +18,8 @@ function handleJoined(element) {
   // Main Page
   const giveawayHeadingElements = document.querySelectorAll('.giveaway__heading');
 
-  giveawayHeadingElements.forEach(async (element) => {
-    const { href } = element.querySelector('.giveaway__heading__name');
+  giveawayHeadingElements.forEach(async (giveawayHeadingElement) => {
+    const { href } = giveawayHeadingElement.querySelector('.giveaway__heading__name');
 
     const url = `${href}?autojoin=true`;
 
@@ -37,29 +37,57 @@ function handleJoined(element) {
       </i>
     `;
 
-    element.appendChild(joinButtonElement);
+    giveawayHeadingElement.appendChild(joinButtonElement);
 
-    const ratingElement = document.createElement('span');
+    const additionalInfoElement = document.createElement('div');
+    additionalInfoElement.classList.add('AdditionalInfoElement');
 
-    ratingElement.style.marginLeft = '4px';
+    giveawayHeadingElement.insertAdjacentElement('afterend', additionalInfoElement);
 
-    ratingElement.innerHTML = `<div style="width: 80px; height: 14px; background-color: #636363; border-radius: 2px;"></div>`;
+    const appUrl = giveawayHeadingElement.querySelector(
+      '[href^="https://store.steampowered.com"]'
+    ).href;
 
-    element.appendChild(ratingElement);
+    const { ageRestricted, rating, achievements } = await chrome.runtime.sendMessage({
+      event: 'steam:game-info',
+      appUrl,
+    });
 
-    const appUrl = element.querySelector('[href^="https://store.steampowered.com"]').href;
+    if (ageRestricted) {
+      const ageRestrictedElement = document.createElement('span');
 
-    const { rating } = await chrome.runtime.sendMessage({ event: 'steam:rating', appUrl });
+      ageRestrictedElement.style.color = '#d70000';
 
-    ratingElement.innerHTML = `(${rating})`;
+      ageRestrictedElement.innerHTML = 'Age restricted';
 
-    if (
-      ['Overwhelmingly Positive', 'Very Positive', 'Positive', 'Mostly Positive'].includes(rating)
-    ) {
-      ratingElement.style.color = '#00d700';
-    } else {
-      ratingElement.style.color = '#d70000';
+      additionalInfoElement.appendChild(ageRestrictedElement);
     }
+
+    if (rating) {
+      const ratingElement = document.createElement('span');
+
+      if (
+        ['Overwhelmingly Positive', 'Very Positive', 'Positive', 'Mostly Positive'].includes(rating)
+      ) {
+        ratingElement.style.color = '#00d700';
+      } else {
+        ratingElement.style.color = '#d70000';
+      }
+
+      ratingElement.innerHTML = `(${rating})`;
+
+      additionalInfoElement.appendChild(ratingElement);
+    }
+
+    if (achievements) {
+      const achievementsElement = document.createElement('span');
+
+      achievementsElement.innerHTML = `(${achievements})`;
+
+      additionalInfoElement.appendChild(achievementsElement);
+    }
+
+    additionalInfoElement.classList.add('AdditionalInfoElement--Loaded');
   });
 
   // Giveaway Page
