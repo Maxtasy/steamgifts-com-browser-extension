@@ -5,8 +5,9 @@
   "description": "Quality of life improvements for Steamgifts.com",
   "content_scripts": [
     {
+      "matches": ["https://www.steamgifts.com/*"],
       "js": ["scripts/content.js"],
-      "matches": ["https://www.steamgifts.com/*"]
+      "css": ["styles/content.css"]
     }
   ],
   "background": {

@@ -1,0 +1,3 @@
+.giveaway__row-outer-wrap:has(.giveaway__row-inner-wrap.is-faded) {
+  display: none;
+}
