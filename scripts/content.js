@@ -1,3 +1,39 @@
+const COLORS = {
+  danger: 'oklch(0.7 0.13 30)',
+  warning: 'oklch(0.7 0.13 100)',
+  success: 'oklch(0.7 0.13 160)',
+  info: 'oklch(0.7 0.13 260)',
+};
+
+const RATING_DATA = {
+  ['Overwhelmingly Positive']: {
+    textColor: COLORS.success,
+  },
+  ['Very Positive']: {
+    textColor: COLORS.success,
+  },
+  ['Positive']: {
+    textColor: COLORS.success,
+  },
+  ['Mostly Positive']: {
+    textColor: COLORS.success,
+  },
+  ['Mixed']: {
+    textColor: COLORS.warning,
+  },
+  ['Mostly Negative']: {
+    textColor: COLORS.danger,
+  },
+  ['Very Negative']: {
+    textColor: COLORS.danger,
+  },
+  else: {
+    textColor: COLORS.info,
+  },
+};
+
+const REASON_NOT_ENOUGH_POINTS = 'Not enough points';
+
 function waitForConditionToBeTrue(condition, callback) {
   if (condition) {
     callback();
@@ -32,7 +68,7 @@ function handleJoined(element) {
     joinButtonElement.innerHTML = `
       <i
         class="giveaway__icon fa fa-fw fa-check"
-        style="color: #00d700; opacity: 1;"
+        style="color: ${COLORS.success}; opacity: 1;"
         >
       </i>
     `;
@@ -66,13 +102,9 @@ function handleJoined(element) {
     if (rating) {
       const ratingElement = document.createElement('span');
 
-      if (
-        ['Overwhelmingly Positive', 'Very Positive', 'Positive', 'Mostly Positive'].includes(rating)
-      ) {
-        ratingElement.style.color = '#00d700';
-      } else {
-        ratingElement.style.color = '#d70000';
-      }
+      ratingElement.style.color = RATING_DATA[`${rating}`]
+        ? RATING_DATA[`${rating}`].textColor
+        : RATING_DATA.else.textColor;
 
       ratingElement.innerHTML = `(${rating})`;
 
@@ -97,7 +129,14 @@ function handleJoined(element) {
   if (autojoinGiveaway) {
     const joinButtonElement = document.querySelector('.sidebar__entry-insert');
 
-    if (!joinButtonElement) return;
+    if (!joinButtonElement) {
+      chrome.runtime.sendMessage({
+        event: 'giveaway:join:fail',
+        reason: REASON_NOT_ENOUGH_POINTS,
+        broadcast: true,
+      });
+      return;
+    }
 
     joinButtonElement.click();
 
@@ -109,3 +148,9 @@ function handleJoined(element) {
     );
   }
 })();
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.event === 'not_enough_points_alert') {
+    alert(REASON_NOT_ENOUGH_POINTS);
+  }
+});

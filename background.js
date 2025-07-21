@@ -1,3 +1,5 @@
+const REASON_NOT_ENOUGH_POINTS = 'Not enough points';
+
 async function ensureOffscreen() {
   const existing = await chrome.offscreen.hasDocument();
   if (!existing) {
@@ -24,8 +26,8 @@ async function getSteamGameInfo(appUrl) {
   });
 }
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  const { event, url, appUrl } = request;
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  const { event, url, appUrl } = message;
 
   if (event === 'giveaway:join:clicked') {
     chrome.tabs.create({ url, active: false });
@@ -33,6 +35,22 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   if (event === 'giveaway:join:success') {
     chrome.tabs.remove(sender.tab.id);
+  }
+
+  if (event === 'giveaway:join:fail' && message.broadcast) {
+    const { reason } = message;
+    if (reason === REASON_NOT_ENOUGH_POINTS) {
+      chrome.tabs.remove(sender.tab.id);
+
+      chrome.tabs.query({}, function (tabs) {
+        for (let tab of tabs) {
+          // Don't send to the sender tab
+          if (tab.id !== sender.tab.id) {
+            chrome.tabs.sendMessage(tab.id, { event: 'not_enough_points_alert' });
+          }
+        }
+      });
+    }
   }
 
   if (event === 'steam:game-info') {
