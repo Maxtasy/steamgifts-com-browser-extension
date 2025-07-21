@@ -44,12 +44,6 @@ function waitForConditionToBeTrue(condition, callback) {
   }
 }
 
-function handleJoined(element) {
-  const wrapperElement = element.closest('.giveaway__row-inner-wrap');
-
-  wrapperElement.classList.add('is-faded');
-}
-
 (() => {
   // Main Page
   const giveawayHeadingElements = document.querySelectorAll('.giveaway__heading');
