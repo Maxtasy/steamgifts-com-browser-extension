@@ -13,13 +13,6 @@
   "background": {
     "service_worker": "background.js"
   },
-  "permissions": ["https://store.steampowered.com/", "offscreen", "scripting", "tabs"],
-  "host_permissions": ["https://store.steampowered.com/*"],
-  "offscreen_documents": [
-    {
-      "matches": ["<all_urls>"],
-      "reason": "DOM_PARSER",
-      "justification": "Parse HTML from Steam store pages"
-    }
-  ]
+  "permissions": ["offscreen", "scripting", "tabs"],
+  "host_permissions": ["https://store.steampowered.com/*"]
 }
