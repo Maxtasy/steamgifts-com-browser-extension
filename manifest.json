@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Steamgifts.com Browser Extension",
-  "version": "0.1",
+  "version": "0.2",
   "description": "Quality of life improvements for Steamgifts.com",
   "content_scripts": [
     {
@@ -13,6 +13,6 @@
   "background": {
     "service_worker": "background.js"
   },
-  "permissions": ["offscreen", "scripting", "tabs"],
+  "permissions": ["offscreen", "tabs", "storage", "cookies"],
   "host_permissions": ["https://store.steampowered.com/*"]
 }
