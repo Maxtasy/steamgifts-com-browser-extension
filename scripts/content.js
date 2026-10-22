@@ -81,7 +81,6 @@ function renderGameInfo(container, info) {
 
   if (info.ageRestricted) {
     container.appendChild(createBadge('Age restricted', 'danger'));
-    return;
   }
 
   container.appendChild(
@@ -89,9 +88,11 @@ function renderGameInfo(container, info) {
       ? createBadge(info.rating, RATING_VARIANTS[info.rating] ?? 'neutral')
       : createBadge('No reviews', 'neutral')
   );
+
+  if (info.achievements === null) return;
   container.appendChild(
-    info.hasAchievements
-      ? createBadge('Achievements', 'accent')
+    info.achievements > 0
+      ? createBadge(`${info.achievements} achievements`, 'accent')
       : createBadge('No achievements', 'neutral')
   );
 }
@@ -174,14 +175,22 @@ function waitFor(condition, timeoutMs) {
 }
 
 async function autojoinGiveaway() {
+  const sidebarText = document.querySelector('.sidebar')?.textContent ?? '';
   const joinButton = document.querySelector('.sidebar__entry-insert');
 
-  if (!joinButton) {
+  if (/not enough points/i.test(sidebarText)) {
     chrome.runtime.sendMessage({
       event: 'giveaway:join:fail',
       reason: REASON_NOT_ENOUGH_POINTS,
       broadcast: true,
     });
+    return;
+  }
+
+  if (!joinButton) {
+    // Ended, deleted or restricted giveaway: keep the tab open and explain why.
+    const reason = document.querySelector('.sidebar__error')?.textContent.trim();
+    showToast("Couldn't join giveaway", reason || 'The join button is not available.');
     return;
   }
 
@@ -191,7 +200,11 @@ async function autojoinGiveaway() {
   }
 
   const joined = await waitFor(() => joinButton.classList.contains('is-hidden'), AUTOJOIN_TIMEOUT_MS);
-  if (joined) chrome.runtime.sendMessage({ event: 'giveaway:join:success' });
+  if (joined) {
+    chrome.runtime.sendMessage({ event: 'giveaway:join:success' });
+  } else {
+    showToast("Couldn't join giveaway", 'Steamgifts did not confirm the entry.');
+  }
 }
 
 // --- Init ---
