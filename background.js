@@ -1,29 +1,100 @@
+import {
+  appDetailsUrl,
+  appReviewsUrl,
+  parseAppDetails,
+  parseAppId,
+  parseAppReviews,
+} from './lib/steam.js';
+
 const REASON_NOT_ENOUGH_POINTS = 'Not enough points';
 
-async function ensureOffscreen() {
-  const existing = await chrome.offscreen.hasDocument();
-  if (!existing) {
-    await chrome.offscreen.createDocument({
-      url: 'offscreen.html',
-      reasons: [chrome.offscreen.Reason.DOM_PARSER],
-      justification: 'Needed to parse HTML from Steam store pages',
-    });
-  }
+const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+const CACHE_PREFIX = 'steam:v2:';
+const MAX_CONCURRENT_FETCHES = 4;
+
+
+let activeFetches = 0;
+const fetchQueue = [];
+
+function throttled(task) {
+  return new Promise((resolve, reject) => {
+    const run = async () => {
+      activeFetches++;
+      try {
+        resolve(await task());
+      } catch (error) {
+        reject(error);
+      } finally {
+        activeFetches--;
+        fetchQueue.shift()?.();
+      }
+    };
+    if (activeFetches < MAX_CONCURRENT_FETCHES) run();
+    else fetchQueue.push(run);
+  });
 }
 
-async function getSteamGameInfo(appUrl) {
-  const response = await fetch(appUrl);
-  const html = await response.text();
-  await ensureOffscreen();
+async function fetchJson(url) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Steam responded with ${response.status}`);
+  return response.json();
+}
 
-  return new Promise((resolve) => {
-    chrome.runtime.sendMessage(
-      { type: 'PARSE_HTML', html },
-      ({ ageRestricted, rating, achievements }) => {
-        resolve({ ageRestricted, rating, achievements });
-      }
+async function fetchGameInfo(appId) {
+  const [details, reviews] = await Promise.all([
+    fetchJson(appDetailsUrl(appId)),
+    fetchJson(appReviewsUrl(appId)),
+  ]);
+
+  return { ...parseAppDetails(details, appId), rating: parseAppReviews(reviews) };
+}
+
+const inFlight = new Map();
+
+async function getSteamGameInfo(rawUrl) {
+  const appId = parseAppId(rawUrl);
+  if (!appId) return { unsupported: true };
+
+  const key = CACHE_PREFIX + appId;
+  const cached = (await chrome.storage.local.get(key))[key];
+  if (cached && Date.now() - cached.savedAt < CACHE_TTL_MS) return cached.info;
+
+  if (!inFlight.has(appId)) {
+    inFlight.set(
+      appId,
+      throttled(() => fetchGameInfo(appId))
+        .then(async (info) => {
+          await chrome.storage.local.set({ [key]: { savedAt: Date.now(), info } });
+          return info;
+        })
+        .finally(() => inFlight.delete(appId))
     );
-  });
+  }
+  return inFlight.get(appId);
+}
+
+async function pruneCache() {
+  const entries = await chrome.storage.local.get(null);
+  const expired = Object.keys(entries).filter(
+    (key) => key.startsWith(CACHE_PREFIX) && Date.now() - entries[key].savedAt >= CACHE_TTL_MS
+  );
+  if (expired.length) await chrome.storage.local.remove(expired);
+}
+
+chrome.runtime.onStartup.addListener(pruneCache);
+chrome.runtime.onInstalled.addListener(pruneCache);
+
+// --- Messaging ---
+
+async function notifyNotEnoughPoints(senderTabId) {
+  const tabs = await chrome.tabs.query({ url: 'https://www.steamgifts.com/*' });
+  await Promise.all(
+    tabs
+      .filter((tab) => tab.id !== senderTabId)
+      .map((tab) =>
+        chrome.tabs.sendMessage(tab.id, { event: 'not_enough_points_alert' }).catch(() => {})
+      )
+  );
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -37,26 +108,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     chrome.tabs.remove(sender.tab.id);
   }
 
-  if (event === 'giveaway:join:fail' && message.broadcast) {
-    const { reason } = message;
-    if (reason === REASON_NOT_ENOUGH_POINTS) {
+  if (event === 'giveaway:join:fail') {
+    if (message.reason === REASON_NOT_ENOUGH_POINTS) {
       chrome.tabs.remove(sender.tab.id);
-
-      chrome.tabs.query({}, function (tabs) {
-        for (let tab of tabs) {
-          // Don't send to the sender tab
-          if (tab.id !== sender.tab.id) {
-            chrome.tabs.sendMessage(tab.id, { event: 'not_enough_points_alert' });
-          }
-        }
-      });
+      notifyNotEnoughPoints(sender.tab.id);
     }
   }
 
   if (event === 'steam:game-info') {
-    getSteamGameInfo(appUrl).then(({ ageRestricted, rating, achievements }) => {
-      sendResponse({ ageRestricted, rating, achievements });
-    });
-    return true; // ✅ allow async response
+    getSteamGameInfo(appUrl)
+      .then(sendResponse)
+      .catch(() => sendResponse({ error: true }));
+    return true; // keep the channel open for the async response
   }
 });
