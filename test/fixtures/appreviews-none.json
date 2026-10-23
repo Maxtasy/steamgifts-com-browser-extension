@@ -1,1 +1,1 @@
-{ "success": 1, "query_summary": { "num_reviews": 0, "review_score": 0, "review_score_desc": "No user reviews", "total_positive": 0, "total_negative": 0, "total_reviews": 0 }, "reviews": [] }
+{ "response": { "store_items": [ { "id": 10, "reviews": { "summary_filtered": { "review_count": 0, "percent_positive": 0, "review_score": 0, "review_score_label": "No user reviews" } } } ] } }
