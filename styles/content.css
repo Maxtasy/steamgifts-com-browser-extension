@@ -56,17 +56,17 @@ header {
   margin-left: 8px;
   padding: 0;
   vertical-align: middle;
-  background: var(--sgx-surface-2);
-  border: 1px solid var(--sgx-border-default);
+  background: transparent;
+  border: 0;
   border-radius: 6px;
-  color: var(--sgx-success);
+  color: var(--sgx-text-secondary);
   cursor: pointer;
-  transition: background-color 120ms var(--sgx-ease), border-color 120ms var(--sgx-ease);
+  transition: background-color 120ms var(--sgx-ease), color 120ms var(--sgx-ease);
 }
 
 .sgx-join:hover {
   background: var(--sgx-surface-3);
-  border-color: var(--sgx-border-strong);
+  color: var(--sgx-text-primary);
 }
 
 .sgx-join:active {
@@ -168,8 +168,8 @@ header {
 
 .sgx-toast {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: flex-start;
+  gap: 10px;
   padding: 12px 14px;
   background: var(--sgx-surface-2);
   border: 1px solid var(--sgx-border-default);
@@ -177,6 +177,34 @@ header {
   box-shadow: 0 16px 40px oklch(0 0 0 / 0.5), 0 2px 6px oklch(0 0 0 / 0.3);
   color: var(--sgx-text-primary);
   animation: sgx-rise 260ms var(--sgx-ease);
+}
+
+.sgx-toast__icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sgx-toast__icon--danger {
+  color: var(--sgx-danger-text);
+}
+
+.sgx-toast__icon--warning {
+  color: var(--sgx-warning-text);
+}
+
+.sgx-toast__content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
 .sgx-toast__title {

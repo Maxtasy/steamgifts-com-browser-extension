@@ -9,7 +9,7 @@ import {
 const REASON_NOT_ENOUGH_POINTS = 'Not enough points';
 
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
-const CACHE_PREFIX = 'steam:v2:';
+const CACHE_PREFIX = 'steam:v3:';
 const MAX_CONCURRENT_FETCHES = 4;
 
 
@@ -43,7 +43,7 @@ async function fetchJson(url) {
 async function fetchGameInfo(appId) {
   const [details, reviews] = await Promise.all([
     fetchJson(appDetailsUrl(appId)),
-    fetchJson(appReviewsUrl(appId)),
+    fetchJson(appReviewsUrl(appId)).catch(() => null),
   ]);
 
   return { ...parseAppDetails(details, appId), rating: parseAppReviews(reviews) };
@@ -86,14 +86,12 @@ chrome.runtime.onInstalled.addListener(pruneCache);
 
 // --- Messaging ---
 
-async function notifyNotEnoughPoints(senderTabId) {
+async function broadcastToSteamgifts(senderTabId, message) {
   const tabs = await chrome.tabs.query({ url: 'https://www.steamgifts.com/*' });
   await Promise.all(
     tabs
       .filter((tab) => tab.id !== senderTabId)
-      .map((tab) =>
-        chrome.tabs.sendMessage(tab.id, { event: 'not_enough_points_alert' }).catch(() => {})
-      )
+      .map((tab) => chrome.tabs.sendMessage(tab.id, message).catch(() => {}))
   );
 }
 
@@ -106,12 +104,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (event === 'giveaway:join:success') {
     chrome.tabs.remove(sender.tab.id);
+    if (message.cost > 0) {
+      broadcastToSteamgifts(sender.tab.id, { event: 'points_spent', cost: message.cost });
+    }
   }
 
   if (event === 'giveaway:join:fail') {
     if (message.reason === REASON_NOT_ENOUGH_POINTS) {
       chrome.tabs.remove(sender.tab.id);
-      notifyNotEnoughPoints(sender.tab.id);
+      broadcastToSteamgifts(sender.tab.id, { event: 'not_enough_points_alert' });
     }
   }
 
