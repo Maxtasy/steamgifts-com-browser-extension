@@ -120,7 +120,7 @@ function renderGameInfo(container, info) {
   container.appendChild(
     info.achievements > 0
       ? createBadge(`${info.achievements} achievements`, 'accent')
-      : createBadge('No achievements', 'neutral')
+      : createBadge('No achievements', 'warning')
   );
 }
 
